@@ -72,8 +72,6 @@ app.all(/^\/.*$/, async (req, res) => {
 
     sock
       .on(ev.forwardID, (mes: ForwardResponse) => {
-        sock.off(ev.forwardID, () => {});
-
         logger.info(`response: id=${mes.forwardID}`, { event: mes });
 
         for (const [k, v] of Object.entries(mes.response.header)) {

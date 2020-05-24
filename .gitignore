@@ -2,3 +2,4 @@
 /dist
 /app-*.yaml
 /deploy-*.sh
+/.env
