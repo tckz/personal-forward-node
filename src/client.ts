@@ -3,6 +3,7 @@ import axios from 'axios';
 import yargs from 'yargs';
 import winston from 'winston';
 import moment from 'moment';
+import micromatch from 'micromatch';
 import { v4 as uuidV4 } from 'uuid';
 require('dotenv').config();
 
@@ -18,24 +19,46 @@ const argv = yargs
     default: false,
     type: "boolean",
   })
+  .option('dump-request', {
+    default: false,
+    type: "boolean",
+  })
   .option('endpoint', {
     default: 'http://localhost:7000',
     type: 'string',
+    requiresArg: true,
+  })
+  .option('pattern', {
+    array: true,
+    type: "string",
+    requiresArg: true,
   })
   .option('target', {
     default: 'http://localhost:3010',
-    type: 'string',
+    array: true,
+    type: "string",
+    requiresArg: true,
   })
   .option('bearer', {
     default: process.env.BEARER_TOKEN,
     type: 'string',
+    requiresArg: true,
   })
   .parse();
+
+if (argv.target?.length == 1 && (!argv.pattern || argv.pattern.length == 0)) {
+  argv.pattern = ["**"];
+}
+
+if (!argv.pattern || (argv.target.length != argv.pattern.length)) {
+  throw new Error(`number of pattern(${argv.pattern?.length}) and target(${argv.target.length}) does not match`)
+}
 
 async function getIDToken(): Promise<string|undefined> {
   if (argv.bearer) {
     return argv.bearer;
   } else if (process.env.REFRESH_TOKEN) {
+    glogger.info(`retrieve id_token using refresh_token: ${process.env.REFRESH_TOKEN}`)
     const resp = await axios.post('https://www.googleapis.com/oauth2/v4/token', {
       client_id: process.env.CLIENT_ID!,
       client_secret: process.env.CLIENT_SECRET!,
@@ -48,6 +71,18 @@ async function getIDToken(): Promise<string|undefined> {
   return;
 }
 
+function chooseTarget(url: string): string | undefined {
+  const i = argv.pattern!.findIndex((e) => {
+    return micromatch.isMatch(url, e);
+  });
+
+  if (i < 0) {
+    return undefined;
+  }
+
+  return argv.target[i];
+}
+
 async function run() {
   const extraHeaders: any = {};
   const bearer = await getIDToken()
@@ -56,7 +91,7 @@ async function run() {
     extraHeaders.Authorization = `Bearer ${bearer}`;
   }
 
-  const channelID = uuidV4();
+  const clientID = uuidV4();
   const sock = io.connect(argv.endpoint, {
     forceNew: true,
     // @ts-ignore
@@ -65,33 +100,60 @@ async function run() {
 
   sock
     .on("connect_timeout", (mes: any) => {
-      glogger.error("connect_timeout", { event: mes });
+      const logger = glogger.child({sockID: sock.id});
+      logger.error(`connect_timeout: id=${sock.id}`, { event: mes });
     })
     .on("connect_error", (mes: any) => {
-      glogger.error("connect_error", { event: mes });
+      const logger = glogger.child({sockID: sock.id});
+      logger.error(`connect_error: id=${sock.id}`, { event: mes });
     })
     .on("error", (mes: any) => {
-      glogger.error("error", { event: mes });
+      const logger = glogger.child({sockID: sock.id});
+      logger.error(`error: id=${sock.id}`, { event: mes });
+    })
+    .on("disconnect", (mes: any) => {
+      const logger = glogger.child({sockID: sock.id});
+      logger.error(`disconnect: id=${sock.id}`, { event: mes });
     })
     .on('connect', () => {
-      glogger.info(`connected: ${argv.endpoint}`);
+      const logger = glogger.child({sockID: sock.id});
+      logger.info(`connected: id=${sock.id}, ${argv.endpoint}`);
     })
     .on('initRequest', (mes: any) => {
-      glogger.info('initRequest:', {event: mes});
+      const logger = glogger.child({sockID: sock.id});
+      logger.info(`initRequest: id=${sock.id}`, {event: mes});
       sock.emit('initResponse', {
-        ch: channelID,
+        clientID: clientID,
       });
     })
     .on('forwardRequest', (mes: ForwardEvent) => {
-      const logger = glogger.child({reqID: mes.forwardID});
-      logger.info("forwardRequest:", {event: mes});
+      const logger = glogger.child({reqID: mes.forwardID, sockID: sock.id});
+      //logger.info("forwardRequest:", {event: mes});
 
       const reqBody = mes.request.body ? Buffer.from(mes.request.body, 'base64') : undefined;
 
-      const baseURL = argv.target;
+      const baseURL = chooseTarget(mes.request.url);
+      if (!baseURL) {
+        logger.error(`no pattern matched: ${mes.request.url}`);
+        const forwardRes: ForwardResponse = {
+          forwardID: mes.forwardID,
+          response: {
+            header: {},
+            statusText: 'Bad Gateway',
+            statusCode: 504,
+          },
+        };
+        sock.emit(mes.forwardID, forwardRes);
+        return;
+      }
       const targetURL = new URL(mes.request.url, baseURL);
 
-      logger.info(`${mes.request.method} ${targetURL}`);
+      const meta: any = {};
+      if (argv["dump-request"]) {
+        meta.request = mes;
+      }
+
+      logger.info(`${mes.request.method} ${targetURL}`, meta);
       const from = moment();
       axios(targetURL.toString(), {
         headers: mes.request.header,
@@ -131,7 +193,7 @@ async function run() {
           sock.emit(mes.forwardID, forwardRes);
         })
         .catch((err) => {
-          logger.error("axios: ", {error : err});
+          logger.error(`axios: ${err}`, {error : err});
 
           const forwardRes: ForwardResponse = {
             forwardID: mes.forwardID,

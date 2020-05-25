@@ -22,8 +22,9 @@ const glogger = winston.createLogger({
 });
 
 const argv = yargs
-  .option('some', {
-    type: 'string',
+  .option('timeout-sec', {
+    default: 120,
+    type: "number",
   })
   .parse();
 
@@ -41,9 +42,10 @@ app.all(/^\/.*$/, async (req, res) => {
 
   const logger = glogger.child({reqID: reqID});
 
-  const sock = channels['dummy'];
+  const sock = channels['default'];
   if (!sock) {
     logger.info('not exist');
+    res.sendStatus(502);
     return;
   }
 
@@ -68,7 +70,7 @@ app.all(/^\/.*$/, async (req, res) => {
     const tid = setTimeout(() => {
       clearTimeout(tid);
       reject('timeout');
-    }, 1000 * 120);
+    }, 1000 * argv["timeout-sec"]);
 
     sock
       .on(ev.forwardID, (mes: ForwardResponse) => {
@@ -104,15 +106,25 @@ app.all(/^\/.*$/, async (req, res) => {
 
   await p;
   const dur = moment.duration(moment().diff(from));
-  logger.info(`done: ${req.url}, dur=${dur.as('seconds')}sec`);
+  logger.info(`done: ${req.url}, status=${res.status}, dur=${dur.as('seconds')}sec`);
 });
 
 io.on('connection', (sock: socketio.Socket) => {
-  glogger.info("connection", {headers: sock.handshake.headers});
+  const logger = glogger.child({sockID: sock.id})
+  logger.info(`connection: id=${sock.id}`, {headers: sock.handshake.headers});
   sock
     .on('initResponse', (msg) => {
-      glogger.info('initResponse: ', { event: msg });
-      channels['dummy'] = sock;
+      logger.info(`initResponse: id=${sock.id}`, { event: msg });
+      channels['default'] = sock;
+    })
+    .on('disconnect', () => {
+      logger.info(`disconnect: id=${sock.id}`);
+      for (const [k, v] of Object.entries(channels)) {
+        if (sock.id == v?.id) {
+          delete channels[k];
+          break;
+        }
+      }
     })
     .emit('initRequest', {});
 });
