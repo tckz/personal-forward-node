@@ -1,11 +1,11 @@
 import express from 'express';
 import winston from 'winston';
-import http from "http";
-import yargs from "yargs";
-import { v4 as uuidV4 } from "uuid";
+import http from 'http';
+import yargs from 'yargs';
+import { v4 as uuidV4 } from 'uuid';
 import axios from 'axios';
 require('dotenv').config();
-const { exec } = require('child_process')
+const { exec } = require('child_process');
 
 const app = express();
 const server = http.createServer(app);
@@ -18,11 +18,11 @@ const glogger = winston.createLogger({
 const argv = yargs
   .option('port', {
     default: 13010,
-    type: "number",
+    type: 'number',
   })
   .parse();
 
-const redirectURI = `http://localhost:${argv.port}`
+const redirectURI = `http://localhost:${argv.port}`;
 
 const browseURL = new URL('https://accounts.google.com/o/oauth2/v2/auth');
 browseURL.searchParams.set('client_id', process.env.CLIENT_ID!);
@@ -40,28 +40,27 @@ app.all(/^\/$/, async (req, res) => {
   const code = req.query.code;
 
   const resp = await axios.post('https://www.googleapis.com/oauth2/v4/token', {
-    'client_id': process.env.CLIENT_ID!,
-    'client_secret': process.env.CLIENT_SECRET!,
-    'code': code.toString(),
-    'redirect_uri': redirectURI,
-    'grant_type': 'authorization_code',
-  })
+    client_id: process.env.CLIENT_ID!,
+    client_secret: process.env.CLIENT_SECRET!,
+    code: code.toString(),
+    redirect_uri: redirectURI,
+    grant_type: 'authorization_code',
+  });
 
-  logger.info("resp", {data: resp.data});
-  res.send(`refresh_token: ${resp.data.refresh_token}`)
+  logger.info('resp', { data: resp.data });
+  res.send(`refresh_token: ${resp.data.refresh_token}`);
 
-  process.kill(process.pid, "SIGTERM");
+  process.kill(process.pid, 'SIGTERM');
 });
-
 
 server.listen(argv.port, () => {
   glogger.info(`Port: ${argv.port}`);
 });
 
-process.on("SIGTERM", () => {
+process.on('SIGTERM', () => {
   glogger.info('received: SIGTERM');
   server.close(() => {
-    glogger.info("closed");
+    glogger.info('closed');
     process.exit(0);
   });
 });

@@ -24,7 +24,7 @@ const glogger = winston.createLogger({
 const argv = yargs
   .option('timeout-sec', {
     default: 120,
-    type: "number",
+    type: 'number',
   })
   .parse();
 
@@ -40,7 +40,7 @@ app.all(/^\/.*$/, async (req, res) => {
   const from = moment();
   const reqID = uuidV4();
 
-  const logger = glogger.child({reqID: reqID});
+  const logger = glogger.child({ reqID: reqID });
 
   const sock = channels['default'];
   if (!sock) {
@@ -70,7 +70,7 @@ app.all(/^\/.*$/, async (req, res) => {
     const tid = setTimeout(() => {
       clearTimeout(tid);
       reject('timeout');
-    }, 1000 * argv["timeout-sec"]);
+    }, 1000 * argv['timeout-sec']);
 
     sock
       .on(ev.forwardID, (mes: ForwardResponse) => {
@@ -99,7 +99,7 @@ app.all(/^\/.*$/, async (req, res) => {
   sock.emit('forwardRequest', ev);
 
   p.catch((err) => {
-    logger.error("error occurred in waiting response", {error: err});
+    logger.error('error occurred in waiting response', { error: err });
   }).then(() => {
     sock.off(ev.forwardID, () => {});
   });
@@ -110,8 +110,8 @@ app.all(/^\/.*$/, async (req, res) => {
 });
 
 io.on('connection', (sock: socketio.Socket) => {
-  const logger = glogger.child({sockID: sock.id})
-  logger.info(`connection: id=${sock.id}`, {headers: sock.handshake.headers});
+  const logger = glogger.child({ sockID: sock.id });
+  logger.info(`connection: id=${sock.id}`, { headers: sock.handshake.headers });
   sock
     .on('initResponse', (msg) => {
       logger.info(`initResponse: id=${sock.id}`, { event: msg });
