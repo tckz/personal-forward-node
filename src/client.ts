@@ -120,8 +120,8 @@ async function run() {
       }
     })
     .on('error', (mes: any) => {
-      const logger = glogger.child({ sockID: sock.id });
-      logger.error(`error: id=${sock.id}`, { event: mes });
+      const logger = glogger.child({});
+      logger.error(`error:`, { event: mes });
     })
     .on('disconnect', (mes: any) => {
       const logger = glogger.child({});

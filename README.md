@@ -5,18 +5,11 @@ Expose your local web server to the internet.
 
 Accept https request from the internet and forward it to local web server. Its response is returned to the requester.
 
-# Development
-
-```bash
-npx ts-node-dev src/server.ts
-```
-
-```bash
-npx ts-node-dev --respawn src/client.ts
-```
-
-
 # Runtime
+
+## Requirements
+
+* GAE Node.js / Flexible environment
 
 ## Server side deployment
 
@@ -29,6 +22,20 @@ $ gcloud app deploy --project somepj app-somesvc.yaml
 
 ```bash
 $ npx ts-node-dev --respawn --endpoint https://somesvc-dot-somepj.appspot.com --target http://localhost:8090
+```
+
+# Development
+
+## Requirements
+
+* Node.js v12
+
+```bash
+npx ts-node-dev src/server.ts
+```
+
+```bash
+npx ts-node-dev --respawn src/client.ts
 ```
 
 # Authenticating with Identity-Aware Proxy

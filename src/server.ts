@@ -6,8 +6,12 @@ import bodyParser from 'body-parser';
 import { v4 as uuidV4 } from 'uuid';
 import winston from 'winston';
 import moment from 'moment';
+import {default as oauth2, OAuth2Client} from 'google-auth-library';
+import * as authorization from 'auth-header';
 
 import { ForwardEvent, ForwardResponse } from './event';
+
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
@@ -28,6 +32,15 @@ const argv = yargs
   })
   .parse();
 
+const newIDTokenVerifier = (clientID: string) => (token: string): Promise<oauth2.LoginTicket> =>  {
+  const client = new OAuth2Client(clientID);
+
+  return client.verifyIdToken({
+    idToken: token,
+    audience: clientID,
+  });
+};
+
 app.use(
   bodyParser.raw({
     type: '*/*',
@@ -40,7 +53,7 @@ app.all(/^\/.*$/, async (req, res) => {
   const from = moment();
   const reqID = uuidV4();
 
-  const logger = glogger.child({ reqID: reqID });
+  const logger = glogger.child({ reqID });
 
   const sock = channels['default'];
   if (!sock) {
@@ -106,12 +119,44 @@ app.all(/^\/.*$/, async (req, res) => {
 
   await p;
   const dur = moment.duration(moment().diff(from));
-  logger.info(`done: ${req.url}, status=${res.status}, dur=${dur.as('seconds')}sec`);
+  logger.info(`done: ${req.url}, status=${res.statusCode}, dur=${dur.as('seconds')}sec`);
+});
+
+io.use(async (socket, next) => {
+  const logger = glogger.child({ sockID: socket.id });
+
+  const iapClientID = process.env.IAP_CLIENT_ID;
+  if (!iapClientID) {
+    return next();
+  }
+
+  if (socket.handshake.headers["x-goog-iap-jwt-assertion"]) {
+    // already authorized by IAP.
+    return next();
+  }
+
+  logger.info("authenticate client", { headers: socket.handshake.headers });
+  const authz = socket.handshake.headers.authorization;
+  if (!authz) {
+    return next(new Error('Authorization header required'));
+  }
+  const res = authorization.parse(authz);
+  if (res.scheme != "Bearer") {
+    return next(new Error('Authorization Bearer required'));
+  }
+  if (!res.token || typeof res.token != "string") {
+    return next(new Error('Authorization Bearer token required'));
+  }
+
+  const ticket = await newIDTokenVerifier(iapClientID)(res.token);
+  logger.info(`id_token verified, email=${ticket.getPayload()?.email}`, { ticket: ticket });
+
+  return next();
 });
 
 io.on('connection', (sock: socketio.Socket) => {
   const logger = glogger.child({ sockID: sock.id });
-  logger.info(`connection: id=${sock.id}`, { headers: sock.handshake.headers });
+  logger.info(`connection: id=${sock.id}`);
   sock
     .on('initResponse', (msg) => {
       logger.info(`initResponse: id=${sock.id}`, { event: msg });
@@ -132,6 +177,8 @@ io.on('connection', (sock: socketio.Socket) => {
     })
     .emit('initRequest', {});
 });
+
+glogger.info("startup", {env: process.env})
 
 server.listen(PORT, () => {
   glogger.info(`Port: ${PORT}`);
