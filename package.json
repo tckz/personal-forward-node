@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/server.js",
     "dist": "tsc",
-	"prettier": "prettier --write ./src",
+    "prettier": "prettier --write ./src",
     "lint": "eslint src --ext ts,tsx; exit 0",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

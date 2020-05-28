@@ -5,9 +5,10 @@ import winston from 'winston';
 import moment from 'moment';
 import micromatch from 'micromatch';
 import { v4 as uuidV4 } from 'uuid';
-require('dotenv').config();
 
 import { ForwardEvent, ForwardResponse } from './event';
+
+require('dotenv').config();
 
 const glogger = winston.createLogger({
   format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
@@ -85,11 +86,15 @@ function chooseTarget(url: string): string | undefined {
 
 async function run() {
   const extraHeaders: any = {};
-  const bearer = await getIDToken();
-  if (bearer) {
-    glogger.info(`bearer: ${bearer}`);
-    extraHeaders.Authorization = `Bearer ${bearer}`;
+
+  async function refreshBearer() {
+    const bearer = await getIDToken();
+    if (bearer) {
+      glogger.info(`bearer: ${bearer}`);
+      extraHeaders.Authorization = `Bearer ${bearer}`;
+    }
   }
+  await refreshBearer();
 
   const clientID = uuidV4();
   const sock = io.connect(argv.endpoint, {
@@ -103,17 +108,24 @@ async function run() {
       const logger = glogger.child({ sockID: sock.id });
       logger.error(`connect_timeout: id=${sock.id}`, { event: mes });
     })
-    .on('connect_error', (mes: any) => {
-      const logger = glogger.child({ sockID: sock.id });
-      logger.error(`connect_error: id=${sock.id}`, { event: mes });
+    .on('connect_error', async (mes: any) => {
+      // {"event":{"type":"TransportError","description":401}
+      const logger = glogger.child({ event: mes });
+      if (mes.type == 'TransportError' && mes.description == 401) {
+        logger.info(`connect_error:`);
+        await refreshBearer();
+      } else {
+        logger.error(`connect_error:`);
+        process.exit(1);
+      }
     })
     .on('error', (mes: any) => {
       const logger = glogger.child({ sockID: sock.id });
       logger.error(`error: id=${sock.id}`, { event: mes });
     })
     .on('disconnect', (mes: any) => {
-      const logger = glogger.child({ sockID: sock.id });
-      logger.error(`disconnect: id=${sock.id}`, { event: mes });
+      const logger = glogger.child({});
+      logger.info(`disconnect:`, { event: mes });
     })
     .on('connect', () => {
       const logger = glogger.child({ sockID: sock.id });

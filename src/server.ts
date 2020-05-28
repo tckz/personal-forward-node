@@ -115,6 +115,10 @@ io.on('connection', (sock: socketio.Socket) => {
   sock
     .on('initResponse', (msg) => {
       logger.info(`initResponse: id=${sock.id}`, { event: msg });
+      const prev = channels['default'];
+      if (prev) {
+        prev.disconnect();
+      }
       channels['default'] = sock;
     })
     .on('disconnect', () => {
