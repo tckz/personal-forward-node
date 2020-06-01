@@ -7,7 +7,8 @@ export interface ForwardEvent {
     // base64 encoded
     body?: string;
   };
-  memo?: string;
+  // base64 encoded
+  traceID?: string;
   created: Date;
 }
 

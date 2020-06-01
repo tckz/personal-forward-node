@@ -9,7 +9,10 @@ Accept https request from the internet and forward it to local web server. Its r
 
 ## Requirements
 
-* GAE Node.js / Flexible environment
+* GAE Node.js
+  * Using WebSocket, requires Flexible environment.
+  * If it does not matter that it use Ajax long polling instead of WebSocket, 
+    You can choose Standard Environment.
 
 ## Server side deployment
 

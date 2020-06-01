@@ -1,3 +1,4 @@
+require('dotenv').config();
 import io from 'socket.io-client';
 import axios from 'axios';
 import yargs from 'yargs';
@@ -7,8 +8,6 @@ import micromatch from 'micromatch';
 import { v4 as uuidV4 } from 'uuid';
 
 import { ForwardEvent, ForwardResponse } from './event';
-
-require('dotenv').config();
 
 const glogger = winston.createLogger({
   format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
@@ -140,7 +139,6 @@ async function run() {
     })
     .on('forwardRequest', (mes: ForwardEvent) => {
       const logger = glogger.child({ reqID: mes.forwardID, sockID: sock.id });
-      //logger.info("forwardRequest:", {event: mes});
 
       const reqBody = mes.request.body ? Buffer.from(mes.request.body, 'base64') : undefined;
 
