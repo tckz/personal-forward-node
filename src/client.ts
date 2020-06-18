@@ -1,3 +1,5 @@
+import Signals = NodeJS.Signals;
+
 require('dotenv').config();
 import io from 'socket.io-client';
 import axios from 'axios';
@@ -100,6 +102,13 @@ async function run() {
     forceNew: true,
     // @ts-ignore
     extraHeaders: extraHeaders,
+  });
+
+  (<Signals[]>['SIGTERM', 'SIGINT']).forEach((sig) => {
+    process.on(sig, () => {
+      glogger.info(`received: ${sig}`);
+      sock.disconnect();
+    });
   });
 
   sock
