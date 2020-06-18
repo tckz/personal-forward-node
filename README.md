@@ -24,7 +24,7 @@ $ gcloud app deploy --project somepj app-somesvc.yaml
 ## Launching client side
 
 ```bash
-$ npx ts-node-dev --respawn --endpoint https://somesvc-dot-somepj.appspot.com --target http://localhost:8090
+$ npx ts-node-dev --respawn src/client.ts --endpoint https://somesvc-dot-somepj.appspot.com --target http://localhost:8090
 ```
 
 # Development
@@ -53,6 +53,14 @@ npx ts-node-dev --respawn src/client.ts
 
 * Get refresh_token which is used to get id_token that specified IAP as the audience.
 * Launch client.ts with refresh_token. The client retrieve id_token using the refresh_token.
+
+#### example: how to retrieve refresh_token
+
+`chrome` must be on the PATH
+
+```bash
+$ npx ts-node-dev src/get_refresh_token.ts
+```
 
 ## Using service account
 
