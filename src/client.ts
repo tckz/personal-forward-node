@@ -179,6 +179,7 @@ async function run() {
         // @ts-ignore
         method: mes.request.method,
         responseType: 'arraybuffer',
+        maxRedirects: 0,
         data: reqBody,
         validateStatus: (status) => {
           // any status should be proxied.
