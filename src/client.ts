@@ -192,7 +192,7 @@ async function run() {
             meta.response = { headers: res.headers };
           }
           const dur = moment.duration(moment().diff(from));
-          logger.info(`${mes.request.method} ${targetURL}, status=${res.status}, dur=${dur.as('seconds')}sec`, meta);
+          logger.info(`${mes.request.method} ${targetURL}, status=${res.status}, dur=${dur.as('seconds')}sec, size=${res.data.length}, type=${res.headers["content-type"]}`, meta);
 
           const resBody = res.data.length ? Buffer.from(res.data).toString('base64') : undefined;
           const forwardRes: ForwardResponse = {
