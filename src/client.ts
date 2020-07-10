@@ -8,7 +8,7 @@ import winston from 'winston';
 import moment from 'moment';
 import micromatch from 'micromatch';
 import { v4 as uuidV4 } from 'uuid';
-
+import Humanize from 'humanize-plus';
 import { ForwardEvent, ForwardResponse } from './event';
 
 const glogger = winston.createLogger({
@@ -192,7 +192,7 @@ async function run() {
             meta.response = { headers: res.headers };
           }
           const dur = moment.duration(moment().diff(from));
-          logger.info(`${mes.request.method} ${targetURL}, status=${res.status}, dur=${dur.as('seconds')}sec, size=${res.data.length}, type=${res.headers["content-type"]}`, meta);
+          logger.info(`${mes.request.method} ${targetURL}, status=${res.status}, dur=${dur.as('seconds')}sec, size=${Humanize.intComma(res.data.length)}, type=${res.headers["content-type"]}`, meta);
 
           const resBody = res.data.length ? Buffer.from(res.data).toString('base64') : undefined;
           const forwardRes: ForwardResponse = {
