@@ -42,7 +42,7 @@ app.all(/^\/$/, async (req, res) => {
   const resp = await axios.post('https://www.googleapis.com/oauth2/v4/token', {
     client_id: process.env.CLIENT_ID!,
     client_secret: process.env.CLIENT_SECRET!,
-    code: code.toString(),
+    code: code!.toString(),
     redirect_uri: redirectURI,
     grant_type: 'authorization_code',
   });
