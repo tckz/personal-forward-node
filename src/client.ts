@@ -21,6 +21,10 @@ const argv = yargs
     default: false,
     type: 'boolean',
   })
+  .option('auth', {
+    default: true,
+    type: 'boolean',
+  })
   .option('dump-request', {
     default: false,
     type: 'boolean',
@@ -89,6 +93,9 @@ async function run() {
   const extraHeaders: any = {};
 
   async function refreshBearer() {
+    if (!argv.auth) {
+      return
+    }
     const bearer = await getIDToken();
     if (bearer) {
       glogger.info(`bearer: ${bearer}`);
