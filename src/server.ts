@@ -142,12 +142,14 @@ io.use(async (socket, next) => {
   // @ts-ignore
   const authorized = !!socket.authorized;
 
+  logger.info('incoming', { headers: socket.handshake.headers });
+
   const iapClientID = process.env.IAP_CLIENT_ID;
   if (authorized || !iapClientID || socket.handshake.headers['x-goog-iap-jwt-assertion']) {
     return next();
   }
 
-  logger.info('authenticate client', { headers: socket.handshake.headers });
+  logger.info('authenticate client');
   const authz = socket.handshake.headers.authorization;
   if (!authz) {
     return next(new Error('Authorization header required'));
