@@ -109,6 +109,8 @@ async function run() {
     forceNew: true,
     // @ts-ignore
     extraHeaders: extraHeaders,
+    // @ts-ignore
+    requestTimeout: 10*1000,
   });
 
   (<Signals[]>['SIGTERM', 'SIGINT']).forEach((sig) => {
