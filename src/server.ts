@@ -66,6 +66,8 @@ app.all(/^\/.*$/, async (req, res) => {
 
   const logger = glogger.child({ reqID, 'logging.googleapis.com/trace': tid });
 
+  logger.info(`request:`, { request: req.headers });
+
   const sock = channels['default'];
   if (!sock) {
     logger.info('not exist');
