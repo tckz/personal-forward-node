@@ -2,6 +2,7 @@ require('dotenv').config();
 const tracer = require('@google-cloud/trace-agent').start({
   samplingRate: 0,
 });
+const ver = require('./version');
 import { serializeTraceContext } from '@google-cloud/trace-agent/build/src/util';
 import express from 'express';
 import socketio from 'socket.io';
@@ -193,10 +194,10 @@ io.on('connection', (sock: socketio.Socket) => {
         }
       }
     })
-    .emit('initRequest', {});
+    .emit("initRequest", { server_version: ver });
 });
 
-glogger.info('startup', { env: process.env });
+glogger.info("startup", { env: process.env, version: ver });
 
 server.listen(PORT, () => {
   glogger.info(`Port: ${PORT}`);

@@ -5,7 +5,7 @@
   "main": "src/server.ts",
   "scripts": {
     "start": "node dist/server.js",
-    "dist": "tsc",
+    "dist": "tsc && echo \"module.exports = '$(git describe --always --tags)';\" > dist/version.js",
     "prettier": "prettier --write ./src",
     "lint": "eslint src --ext ts,tsx; exit 0",
     "check-update": "ncu",
