@@ -19,7 +19,7 @@ import { ForwardEvent, ForwardResponse } from './event';
 
 const app = express();
 const server = http.createServer(app);
-const io = socketio(server);
+const io = new socketio.Server(server);
 const PORT = process.env.PORT || 7000;
 
 const channels: NodeJS.Dict<socketio.Socket> = {};
@@ -148,11 +148,13 @@ io.use(async (socket, next) => {
   logger.info('incoming', { headers: socket.handshake.headers });
 
   const iapClientID = process.env.IAP_CLIENT_ID;
+  // @ts-ignore
   if (authorized || !iapClientID || socket.handshake.headers['x-goog-iap-jwt-assertion']) {
     return next();
   }
 
   logger.info('authenticate client');
+  // @ts-ignore
   const authz = socket.handshake.headers.authorization;
   if (!authz) {
     return next(new Error('Authorization header required'));

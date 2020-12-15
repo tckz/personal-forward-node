@@ -1,7 +1,7 @@
 import Signals = NodeJS.Signals;
 
 require('dotenv').config();
-import io from 'socket.io-client';
+import { Manager } from "socket.io-client";
 import axios from 'axios';
 import yargs from 'yargs';
 import winston from 'winston';
@@ -105,13 +105,16 @@ async function run() {
   await refreshBearer();
 
   const clientID = uuidV4();
-  const sock = io.connect(argv.endpoint, {
+
+  const manager = new Manager(argv.endpoint, {
+    autoConnect: true,
     forceNew: true,
     // @ts-ignore
     extraHeaders: extraHeaders,
     // @ts-ignore
     requestTimeout: 10*1000,
   });
+  const sock = manager.socket("/");
 
   (<Signals[]>['SIGTERM', 'SIGINT']).forEach((sig) => {
     process.on(sig, () => {
